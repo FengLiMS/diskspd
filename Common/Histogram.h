@@ -51,10 +51,11 @@ class Histogram
 #define USE_HASH_TABLE
 #ifdef USE_HASH_TABLE
     std::unordered_map<T,unsigned> _data;
+    std::map<T, unsigned>  _sortedData;    
 
     std::map<T,unsigned> _GetSortedData() const
     {
-        return std::map<T,unsigned>(_data.begin(), _data.end());
+        return _sortedData;
     }
 #else
     std::map<T,unsigned> _data;
@@ -90,6 +91,9 @@ class Histogram
         }
 
         _samples += other._samples;
+#ifdef USE_HASH_TABLE
+        _sortedData = std::map<T, unsigned>(_data.begin(), _data.end());
+#endif        
     }
 
     T GetMin() const
