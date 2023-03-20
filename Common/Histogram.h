@@ -114,12 +114,10 @@ class Histogram
         }
         else
         {
-            for (auto i : _sorteddata)
+            auto i = _sorteddata.begin();
+            if (i->first < min)
             {
-                if (i.first < min)
-                {
-                    min = i.first;
-                }
+                min = i->first;
             }
         }
         return min;
@@ -141,12 +139,10 @@ class Histogram
         }
         else
         {
-            for (auto i : _sorteddata)
+            auto i = _sorteddata.rbegin();
+            if (i->first > max)
             {
-                if (i.first > max)
-                {
-                    max = i.first;
-                }
+                max = i->first;
             }
         }
 
