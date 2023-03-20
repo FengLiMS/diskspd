@@ -51,11 +51,16 @@ class Histogram
 #define USE_HASH_TABLE
 #ifdef USE_HASH_TABLE
     std::unordered_map<T,unsigned> _data;
-    std::map<T, unsigned>  _sortedData;    
+    std::map<T, unsigned> _sorteddata;
 
-    std::map<T,unsigned> _GetSortedData() const
+    std::map<T,unsigned> _GetSortedData() 
     {
-        return _sortedData;
+        if (_sorteddata.empty())
+        {
+            _sorteddata= std::map<T, unsigned>(_data.begin(), _data.end());
+            _data.clear();
+        }
+        return _sorteddata;
     }
 #else
     std::map<T,unsigned> _data;
@@ -91,23 +96,32 @@ class Histogram
         }
 
         _samples += other._samples;
-#ifdef USE_HASH_TABLE
-        _sortedData = std::map<T, unsigned>(_data.begin(), _data.end());
-#endif        
     }
 
     T GetMin() const
-    { 
+    {
         T min(std::numeric_limits<T>::max());
 
-        for (auto i : _data)
+        if (_sorteddata.empty())
         {
-            if (i.first < min)
+            for (auto i : _data)
             {
-                min = i.first;
+                if (i.first < min)
+                {
+                    min = i.first;
+                }
             }
         }
-
+        else
+        {
+            for (auto i : _sorteddata)
+            {
+                if (i.first < min)
+                {
+                    min = i.first;
+                }
+            }
+        }
         return min;
     }
 
@@ -115,11 +129,24 @@ class Histogram
     {
         T max(std::numeric_limits<T>::min());
 
-        for (auto i : _data)
+        if (_sorteddata.empty())
         {
-            if (i.first > max) 
+            for (auto i : _data)
             {
-                max = i.first;
+                if (i.first > max)
+                {
+                    max = i.first;
+                }
+            }
+        }
+        else
+        {
+            for (auto i : _sorteddata)
+            {
+                if (i.first > max)
+                {
+                    max = i.first;
+                }
             }
         }
 
@@ -143,7 +170,8 @@ class Histogram
         const double target = GetSampleSize() * p;
 
         unsigned cur = 0;
-        for (auto i : _GetSortedData()) 
+
+        for (auto i : const_cast<Histogram*>(this)->_GetSortedData())
         {
             cur += i.second;
             if (cur >= target)
@@ -175,17 +203,35 @@ class Histogram
         double sum(0);
         unsigned samples = GetSampleSize();
 
-        for (auto i : _data)
+        if (_sorteddata.empty())
         {
-            double bucket_val =
-                static_cast<double>(i.first) * i.second / samples;
-
-            if (sum + bucket_val < 0)
+            for (auto i : _data)
             {
-                throw std::overflow_error("while trying to accumulate sum");
-            }
+                double bucket_val =
+                    static_cast<double>(i.first) * i.second / samples;
 
-            sum += bucket_val;
+                if (sum + bucket_val < 0)
+                {
+                    throw std::overflow_error("while trying to accumulate sum");
+                }
+
+                sum += bucket_val;
+            }
+        }
+        else
+        {
+            for (auto i : _sorteddata)
+            {
+                double bucket_val =
+                    static_cast<double>(i.first) * i.second / samples;
+
+                if (sum + bucket_val < 0)
+                {
+                    throw std::overflow_error("while trying to accumulate sum");
+                }
+
+                sum += bucket_val;
+            }
         }
 
         return sum;
@@ -196,11 +242,23 @@ class Histogram
         double mean(GetMean());
         double ssd(0);
 
-        for (auto i : _data)
+        if (_sorteddata.empty())
         {
-            double dev = static_cast<double>(i.first) - mean;
-            double sqdev = dev*dev;
-            ssd += i.second * sqdev;
+            for (auto i : _data)
+            {
+                double dev = static_cast<double>(i.first) - mean;
+                double sqdev = dev * dev;
+                ssd += i.second * sqdev;
+            }
+        }
+        else
+        {
+            for (auto i : _sorteddata)
+            {
+                double dev = static_cast<double>(i.first) - mean;
+                double sqdev = dev * dev;
+                ssd += i.second * sqdev;
+            }
         }
 
         return sqrt(ssd / GetSampleSize());
@@ -223,7 +281,7 @@ class Histogram
         std::ostringstream os;
         os.precision(std::numeric_limits<T>::digits10);
 
-        std::map<T,unsigned> sortedData = _GetSortedData();
+        std::map<T,unsigned> sortedData = const_cast<Histogram*>(this)->_GetSortedData();
 
         auto pos = sortedData.begin(); 
 
@@ -254,7 +312,7 @@ class Histogram
         std::ostringstream os;
         os.precision(std::numeric_limits<T>::digits10);
 
-        for (auto i : _GetSortedData()) 
+        for (auto i : const_cast<Histogram*>(this)->_GetSortedData();)
         {
             os << i.first << "," << i.second << std::endl;
         }
@@ -266,7 +324,7 @@ class Histogram
     {
         std::ostringstream os;
 
-        for (auto i : _GetSortedData()) 
+        for (auto i : const_cast<Histogram*>(this)->_GetSortedData();)
         {
             os << i.second << " " << i.first << std::endl;
         }
